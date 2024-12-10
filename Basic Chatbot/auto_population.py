@@ -173,12 +173,23 @@ def create_pdf(questions, answers):
 
 
 
-
+# AI model code
 from langchain_community.chat_models import ChatOllama
 from transformers import pipeline
 import torch
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
+from langchain.vectorstores import Chroma
+from langchain.embeddings import HuggingFaceEmbeddings
+
+
+embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
+
+# Load the existing Chroma database
+vectorstore = Chroma(
+    persist_directory="./app_examples_db",
+    embedding_function=embeddings
+)
 
 
 nltk.download('punkt')
@@ -226,7 +237,7 @@ def check_hallucination(nli_model, chunk, description):
     # print(result["scores"])
     # print(chunk)
     # print()
-    return result['scores'][0] < 0.83
+    return result['scores'][0] < 0.8
 
 def regenerate_answer(llm, chunks, description, question, answer):
     prompt = f"""
@@ -259,6 +270,10 @@ def generate_answers(description, questions):
     description_chunks = chunk_text(description, 600, 10)
     answers = []
 
+    query = description
+    results = vectorstore.similarity_search(query, k=1)
+    result = results[0].page_content
+
     try:
         for question in questions:
             prompt = f"""
@@ -277,6 +292,9 @@ def generate_answers(description, questions):
             - Act as though you are the company representative trying to inform about your company.
             - Everything should be in plain text. Do not include any formatting or special characters.
             - Be descriptive and provide concrete detail.
+
+            Here is an example of a filled out application:
+            {result}
             """
 
             answer = llm.invoke(prompt).content
