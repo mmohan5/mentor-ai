@@ -183,13 +183,13 @@ from langchain.vectorstores import Chroma
 from langchain.embeddings import HuggingFaceEmbeddings
 
 
-embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
+# embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
 
-# Load the existing Chroma database
-vectorstore = Chroma(
-    persist_directory="./app_examples_db",
-    embedding_function=embeddings
-)
+# # Load the existing Chroma database
+# vectorstore = Chroma(
+#     persist_directory="./app_examples_db",
+#     embedding_function=embeddings
+# )
 
 
 nltk.download('punkt')
@@ -237,7 +237,7 @@ def check_hallucination(nli_model, chunk, description):
     # print(result["scores"])
     # print(chunk)
     # print()
-    return result['scores'][0] < 0.8
+    return result['scores'][0] < 0.83
 
 def regenerate_answer(llm, chunks, description, question, answer):
     prompt = f"""
@@ -266,13 +266,13 @@ def regenerate_answer(llm, chunks, description, question, answer):
 def generate_answers(description, questions):
     llm = ChatOllama(model="llama3.1", device="cuda", temperature=0)
     nli_model = pipeline("zero-shot-classification", model="facebook/bart-large-mnli", device=0 if torch.cuda.is_available() else -1)
-    no_info = "Information not provided"
+    no_info = "Information not found"
     description_chunks = chunk_text(description, 600, 10)
     answers = []
 
-    query = description
-    results = vectorstore.similarity_search(query, k=1)
-    result = results[0].page_content
+    # query = description
+    # results = vectorstore.similarity_search(query, k=1)
+    # result = results[0].metadata['source_content']
 
     try:
         for question in questions:
@@ -292,10 +292,10 @@ def generate_answers(description, questions):
             - Act as though you are the company representative trying to inform about your company.
             - Everything should be in plain text. Do not include any formatting or special characters.
             - Be descriptive and provide concrete detail.
-
-            Here is an example of a filled out application:
-            {result}
-            """
+"""
+            # Here is an example of a filled out application (for format and structure reference only; do not use this information in your response):
+            # ""{result}""
+            # """
 
             answer = llm.invoke(prompt).content
 
