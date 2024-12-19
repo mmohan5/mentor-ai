@@ -192,7 +192,7 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 # )
 
 
-nltk.download('punkt')
+nltk.download('punkt_tab')
 
 # 100 tokens per chunk
 def chunk_text(text, max_tokens=80, overlap=8):
