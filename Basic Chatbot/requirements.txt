@@ -1,6 +1,6 @@
 streamlit==1.41.0
-langchain-community==0.2.31
-fpdf==1.86
+langchain-community==0.2.3
+fpdf==1.7.2
 transformers==4.47.1
 torch==2.5
 nltk==3.9.1
