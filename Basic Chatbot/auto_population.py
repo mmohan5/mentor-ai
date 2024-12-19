@@ -179,8 +179,8 @@ from transformers import pipeline
 import torch
 import nltk
 from nltk.tokenize import sent_tokenize, word_tokenize
-from langchain.vectorstores import Chroma
-from langchain.embeddings import HuggingFaceEmbeddings
+# from langchain.vectorstores import Chroma
+# from langchain.embeddings import HuggingFaceEmbeddings
 
 
 # embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
