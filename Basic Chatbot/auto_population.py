@@ -237,7 +237,7 @@ def check_hallucination(nli_model, chunk, description):
     # print(result["scores"])
     # print(chunk)
     # print()
-    return result['scores'][0] < 0.83
+    return result['scores'][0] < 0.81
 
 def regenerate_answer(llm, chunks, description, question, answer):
     prompt = f"""
