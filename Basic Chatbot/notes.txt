@@ -4,3 +4,6 @@ pip install langchain-community==0.2.3
 pip install langchain-text-splitters==0.2.4
 
 pip install langchain-ollama==0.1.1 
+
+
+Personal Repo
