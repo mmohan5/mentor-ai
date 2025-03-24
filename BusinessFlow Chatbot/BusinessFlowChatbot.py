@@ -220,8 +220,8 @@ if page == "User":
                     question = PROMPTS[section]
 
                     if st.session_state.phase == "initial":
-                        st.session_state.state["responses"][section] = "SKIPPED"
-                        st.session_state.state["history"].setdefault(section, []).append(f"Q: {question}\nA: SKIPPED")
+                        st.session_state.state["responses"][section] = "Skipped"
+                        st.session_state.state["history"].setdefault(section, []).append(f"Q: {question}\nA: Skipped")
 
                         st.session_state.state["history"][section].append("Q: [Follow-up question skipped due to initial skip]\nA: Skipped")
                         st.session_state.state["current_section"] += 1
@@ -240,7 +240,8 @@ if page == "User":
                 st.session_state.state["current_section"] = max(0, st.session_state.state["current_section"] - 1)
                 st.rerun()
             elif user_input.lower() == "restart":
-                init_state()
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
                 st.rerun()
             else:
                 st.session_state.pending_input = user_input
