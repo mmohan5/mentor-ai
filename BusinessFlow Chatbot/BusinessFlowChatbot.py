@@ -265,7 +265,7 @@ if page == "Admin":
     defaults = RAW_PROMPT_DATA.get("defaults", {})
 
     # ---------- FOLLOW-UP PROMPT ----------
-    st.markdown("### 🔁 Follow-Up Prompt")
+    st.markdown("### 🔁 Question Follow-Up Prompt")
     st.markdown("Must include `{question}` and `{response}`.\n")
 
     followup_custom = customs.get("followup_prompt", "")
@@ -296,7 +296,7 @@ if page == "Admin":
     st.markdown("---")
 
     # ---------- COMPILE PLAN PROMPT ----------
-    st.markdown("### 🧠 Compile Plan Prompt")
+    st.markdown("### 🧠 Generate Plan Prompt")
     st.markdown("Must include `{all_qa}`.\n")
 
     compile_custom = customs.get("compile_plan_prompt", "")
@@ -327,7 +327,7 @@ if page == "Admin":
     st.markdown("---")
 
     # ---------- SECTION PROMPTS ----------
-    st.markdown("### 📄 Section Prompts")
+    st.markdown("### 📄 Plan Section Prompts")
 
     custom_section_map = {s["name"]: s["prompt"] for s in customs.get("sections", [])}
     default_section_map = {s["name"]: s["prompt"] for s in defaults.get("sections", [])}
