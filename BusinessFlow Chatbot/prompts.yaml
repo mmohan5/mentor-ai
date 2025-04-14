@@ -1,8 +1,134 @@
-Company Description: "Describe your business. What is its name, what problem does it solve, and what makes it unique?"
-Market Analysis: "Who is your target audience, and who are your main competitors?"
-Organization and Management: "What is your business structure, and who are the key members of your team?"
-Service or Product Line: "What products or services do you offer, and how do they benefit customers?"
-Marketing and Sales: "How will you attract and retain customers, and how will you generate sales?"
-Funding Request: "How much funding do you need, and what will it be used for?"
-Financial Projections: "What are your projected revenues, expenses, and break-even point?"
-Executive Summary: "Summarize your business plan in a few sentences."
+customs:
+  compile_plan_prompt: 'Based on the following structured questions and answers, generate
+    a detailed, professional, and well-formatted business plan. Ensure that it follows
+    this structure:
+
+
+    1. Executive Summary
+
+    2. Company Description
+
+    3. Market Analysis
+
+    4. Organization and Management
+
+    5. Service or Product Line
+
+    6. Marketing and Sales
+
+    7. Funding Request
+
+    8. Financial Projections
+
+
+    Here is the collected information:
+
+
+    {all_qa}
+
+
+    Do not fabricate any information or make assumptions. Make sure to only use the
+    provided information to generate the business plan.
+
+    Now, craft a professional business plan with clear, concise, and structured content.
+
+    '
+  followup_prompt: 'Analyze this business plan response and identify any missing details:
+
+
+    Question: {question}
+
+    Response: {response}
+
+
+    Create a follow-up question to fill any gaps and complete incomplete responses
+    if the response does not answer all questions asked. Do not call it the follow-up
+    question, mention "follow-up question" at all, or use any kind of qualifiers or
+    titles to label it as something similar. Only ask the question directly.
+
+    '
+  sections:
+  - name: Company Description
+    prompt: Describe your business. What is its name, what problem does it solve,
+      and what makes it unique?
+  - name: Market Analysis
+    prompt: Who is your target audience, and who are your main competitors?
+  - name: Organization and Management
+    prompt: What is your business structure, and who are the key members of your team?
+  - name: Service or Product Line
+    prompt: What products or services do you offer, and how do they benefit customers?
+  - name: Marketing and Sales
+    prompt: How will you attract and retain customers, and how will you generate sales?
+  - name: Funding Request
+    prompt: How much funding do you need, and what will it be used for?
+  - name: Financial Projections
+    prompt: What are your projected revenues, expenses, and break-even point?
+  - name: Executive Summary
+    prompt: Summarize your business plan in a few sentences.
+defaults:
+  compile_plan_prompt: 'Based on the following structured questions and answers, generate
+    a detailed, professional, and well-formatted business plan. Ensure that it follows
+    this structure:
+
+
+    1. Executive Summary
+
+    2. Company Description
+
+    3. Market Analysis
+
+    4. Organization and Management
+
+    5. Service or Product Line
+
+    6. Marketing and Sales
+
+    7. Funding Request
+
+    8. Financial Projections
+
+
+    Here is the collected information:
+
+
+    {all_qa}
+
+
+    Do not fabricate any information or make assumptions. Make sure to only use the
+    provided information to generate the business plan.
+
+    Now, craft a professional business plan with clear, concise, and structured content.
+
+    '
+  followup_prompt: 'Analyze this business plan response and identify any missing details:
+
+
+    Question: {question}
+
+    Response: {response}
+
+
+    Create a follow-up question to fill any gaps and complete incomplete responses
+    if the response does not answer all questions asked. Do not call it the follow-up
+    question, mention "follow-up question" at all, or use any kind of qualifiers or
+    titles to label it as something similar. Only ask the question directly.
+
+    '
+  sections:
+  - name: Company Description
+    prompt: Describe your business. What is its name, what problem does it solve,
+      and what makes it unique?
+  - name: Market Analysis
+    prompt: Who is your target audience, and who are your main competitors?
+  - name: Organization and Management
+    prompt: What is your business structure, and who are the key members of your team?
+  - name: Service or Product Line
+    prompt: What products or services do you offer, and how do they benefit customers?
+  - name: Marketing and Sales
+    prompt: How will you attract and retain customers, and how will you generate sales?
+  - name: Funding Request
+    prompt: How much funding do you need, and what will it be used for?
+  - name: Financial Projections
+    prompt: What are your projected revenues, expenses, and break-even point?
+  - name: Executive Summary
+    prompt: Summarize your business plan in a few sentences.

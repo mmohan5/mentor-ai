@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, List, TypedDict
 from langgraph.graph import StateGraph, END
 from langchain_community.chat_models import ChatOllama
+import time
 
 st.set_page_config(layout="wide")
 
@@ -12,11 +13,18 @@ st.set_page_config(layout="wide")
 def gpu_check():
     try:
         output = subprocess.check_output("nvidia-smi", shell=True).decode("utf-8")
+        
         if "No devices were found" in output:
             st.error("🚫 No GPU detected. Exiting.")
             st.stop()
         elif "%" in output:
-            st.success("✅ GPU check passed.")
+            if "show_gpu_success" not in st.session_state:
+                st.session_state.show_gpu_success = True
+                st.rerun()
+            elif st.session_state.show_gpu_success:
+                st.success("✅ GPU check passed.")
+                time.sleep(1)
+                st.session_state.show_gpu_success = False
         else:
             st.warning("⚠️ GPU detected but not in use. Exiting.")
             st.stop()
@@ -26,19 +34,32 @@ def gpu_check():
 
 gpu_check()
 
+
 # -------------------- PROMPT MANAGEMENT --------------------
 PROMPT_FILE = Path("prompts.yaml")
 
 def load_prompts():
     with open(PROMPT_FILE, "r") as f:
-        return yaml.safe_load(f)
+        raw = yaml.safe_load(f)
+
+    customs = raw.get("customs", {})
+    custom_sections = {s["name"]: s["prompt"] for s in customs.get("sections", [])}
+
+    prompts = {
+        "followup_prompt": customs.get("followup_prompt", ""),
+        "compile_plan_prompt": customs.get("compile_plan_prompt", ""),
+        "sections": list(custom_sections.keys()),
+        "section_prompts": custom_sections
+    }
+
+    return prompts, raw
 
 def save_prompts(data):
     with open(PROMPT_FILE, "w") as f:
         yaml.safe_dump(data, f)
 
-PROMPTS = load_prompts()
-SECTIONS = list(PROMPTS.keys())
+PROMPTS, RAW_PROMPT_DATA = load_prompts()
+SECTIONS = PROMPTS["sections"]
 
 # -------------------- STATE & FLOW DEFINITIONS --------------------
 llm = ChatOllama(model="llama3.1", device="cuda", temperature=0)
@@ -56,18 +77,22 @@ class BusinessPlanBuilder:
         for section in SECTIONS:
             graph.add_node(section, self.ask_initial_question)
             graph.add_node(f"{section} Followup", self.ask_followup_question)
-            next_node = SECTIONS[SECTIONS.index(section)+1] if section != "Executive Summary" else "Compile Plan"
+
+            is_last = SECTIONS.index(section) == len(SECTIONS) - 1
+            next_node = "Compile Plan" if is_last else SECTIONS[SECTIONS.index(section)+1]
+
             graph.add_edge(section, f"{section} Followup")
             graph.add_edge(f"{section} Followup", next_node)
-            
+
         graph.add_node("Compile Plan", self.compile_plan)
         graph.add_edge("Compile Plan", END)
-        graph.set_entry_point("Company Description")
+        graph.set_entry_point(SECTIONS[0])  # dynamic entry point
         self.graph = graph.compile()
+
 
     def ask_initial_question(self, state: BusinessPlanState):
         section = state["sections"][state["current_section"]]
-        question = PROMPTS[section]
+        question = PROMPTS["section_prompts"][section]
         state["responses"][section] = state["user_input"]
         state["history"].setdefault(section, []).append(f"Q: {question}\nA: {state['user_input']}")
         st.session_state.phase = "await_followup"
@@ -76,13 +101,11 @@ class BusinessPlanBuilder:
     def ask_followup_question(self, state: BusinessPlanState):
         section = state["sections"][state["current_section"]]
         initial_response = state["responses"][section]
-        question = PROMPTS[section]
-        followup_prompt = f"""Analyze this business plan response and identify any missing details:
-        
-        Question: {question}
-        Response: {initial_response}
+        question = PROMPTS["section_prompts"][section]
 
-        Create a follow-up question to fill any gaps and complete incomplete responses if the response does not answer all questions asked. Do not call it the follow-up question, mention "follow-up question at all", or use any kind of qualifiers or titles to label it as something similar. Only ask the question directly."""
+        followup_template = PROMPTS["followup_prompt"]
+        followup_prompt = followup_template.format(question=question, response=initial_response)
+
         followup = llm.invoke(followup_prompt).content.strip()
         st.session_state.followup_question = followup
 
@@ -95,24 +118,9 @@ class BusinessPlanBuilder:
 
     def compile_plan(self, state: BusinessPlanState):
         all_qa = "\n\n".join(["\n".join(qas) for qas in state["history"].values()])
-        prompt = f"""Based on the following structured questions and answers, generate a detailed, professional, and well-formatted business plan. Ensure that it follows this structure:
+        prompt_template = PROMPTS["compile_plan_prompt"]
+        prompt = prompt_template.format(all_qa=all_qa)
 
-        1. Executive Summary
-        2. Company Description
-        3. Market Analysis
-        4. Organization and Management
-        5. Service or Product Line
-        6. Marketing and Sales
-        7. Funding Request
-        8. Financial Projections
-
-        Here is the collected information:
-
-        {all_qa}
-
-        Do not fabricate any information or make assumptions. Make sure to only use the provided information to generate the business plan.
-        Now, craft a professional business plan with clear, concise, and structured content.
-        """
         plan = llm.invoke(prompt).content.strip()
         disclaimer = "\n\n\n📌 NOTE: The generated business plan is a starting point and may require further refinement and correction."
         plan += disclaimer
@@ -140,7 +148,7 @@ def init_state():
 init_state()
 
 # -------------------- MAIN INTERFACE --------------------
-st.sidebar.image("charlotte_logo.png", width=120)
+st.sidebar.image("charlotte_white_logo.png", width=160)
 page = st.sidebar.radio("Navigate", ["User", "Admin"])
 
 if page == "User":
@@ -157,17 +165,14 @@ if page == "User":
     ⚠️ Warning: **back** and **restart** will erase answers!
     """)
 
-
     st.title("💬 Business Plan Chatbot")
 
-    # Render chat history with section headers
     for section in SECTIONS:
         for qa in st.session_state["state"]["history"].get(section, []):
             q, a = qa.split("\nA: ")
             st.chat_message("assistant").markdown(q.replace("Q: ", ""))
             st.chat_message("user").markdown(a)
 
-    # Final Plan
     if st.session_state.final_plan:
         st.success("✅ Your complete business plan:")
         st.markdown(st.session_state.final_plan)
@@ -178,24 +183,20 @@ if page == "User":
         
         current_section = st.session_state.state["sections"][st.session_state.state["current_section"]]
         phase = st.session_state.phase
-        prompt = PROMPTS[current_section] if phase == "initial" else st.session_state.followup_question
+        prompt = PROMPTS["section_prompts"][current_section] if phase == "initial" else st.session_state.followup_question
         st.chat_message("assistant").markdown(f"**{current_section}**\n\n{prompt}")
 
-        # First-time init rerun
         if not st.session_state.llm_ready_for_input:
             st.session_state.llm_ready_for_input = True
             st.rerun()
 
-        # 🧠 Phase 1: Generating Response (before LLM runs)
         if st.session_state.waiting_for_llm and st.session_state.pending_input:
             with st.chat_message("assistant"):
                 st.markdown("⏳ _Generating your response..._")
 
-
-        # 🧠 Phase 2: Actually run LLM logic
         if st.session_state.waiting_for_llm and st.session_state.pending_input is not None:
             st.session_state.state["user_input"] = st.session_state.pending_input
-            st.session_state.pending_input = None  # only run once
+            st.session_state.pending_input = None
 
             if st.session_state.phase == "initial":
                 st.session_state.builder.ask_initial_question(st.session_state.state)
@@ -207,9 +208,7 @@ if page == "User":
             st.session_state.waiting_for_llm = False
             st.rerun()
 
-        
         user_input = st.chat_input("Type your answer here...")
-
 
         if user_input:
             if user_input.lower() == "skip":
@@ -217,17 +216,14 @@ if page == "User":
 
                 if current_section_idx < len(st.session_state.state["sections"]):
                     section = st.session_state.state["sections"][current_section_idx]
-                    question = PROMPTS[section]
+                    question = PROMPTS["section_prompts"][section]
 
                     if st.session_state.phase == "initial":
                         st.session_state.state["responses"][section] = "Skipped"
                         st.session_state.state["history"].setdefault(section, []).append(f"Q: {question}\nA: Skipped")
-
                         st.session_state.state["history"][section].append("Q: [Follow-up question skipped due to initial skip]\nA: Skipped")
                         st.session_state.state["current_section"] += 1
-                        st.session_state.phase = "initial"  # reset for next section
-
-                    # If skipping during the follow-up phase only
+                        st.session_state.phase = "initial"
                     elif st.session_state.phase == "await_followup":
                         followup_q = st.session_state.followup_question or "[Follow-up question]"
                         st.session_state.state["history"][section].append(f"Q: {followup_q}\nA: Skipped")
@@ -247,17 +243,148 @@ if page == "User":
                 st.session_state.pending_input = user_input
                 st.session_state.waiting_for_llm = True
                 st.rerun()
-                
-
-
-
 
 # -------------------- ADMIN PANEL --------------------
 if page == "Admin":
-    st.title("🛠️ Admin: Edit Prompts")
-    updated = {}
-    for section, question in PROMPTS.items():
-        updated[section] = st.text_area(section, value=question)
+    st.title("🛠️ Admin Panel")
+
+    st.sidebar.markdown("---")
+
+    st.sidebar.markdown("### 📘 Instructions")
+    st.sidebar.markdown("""
+    - Edit the **prompts** freely below
+    - Press **Reset** to reset a prompt (this will erase unsaved changes)
+    - Press **Save All Changes** to apply
+
+    **Important Notes**:
+    - `{question}` and `{response}` must appear in the follow-up prompt
+    - `{all_qa}` must appear in the compile plan prompt
+    """)
+
+    customs = RAW_PROMPT_DATA.get("customs", {})
+    defaults = RAW_PROMPT_DATA.get("defaults", {})
+
+    # ---------- FOLLOW-UP PROMPT ----------
+    st.markdown("### 🔁 Follow-Up Prompt")
+    st.markdown("Must include `{question}` and `{response}`.\n")
+
+    followup_custom = customs.get("followup_prompt", "")
+    followup_default = defaults.get("followup_prompt", "")
+
+    if "followup_prompt" not in st.session_state:
+        st.session_state["followup_prompt"] = followup_custom
+
+    if st.session_state.get("reset_followup_flag"):
+        st.session_state["followup_prompt"] = followup_default
+        st.session_state["reset_followup_flag"] = False
+        st.rerun()
+
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.text_area(
+            "Follow-Up Prompt Template",
+            value=st.session_state["followup_prompt"],
+            key="followup_prompt",
+            height=200,
+            label_visibility="collapsed"
+        )
+    with col2:
+        if st.button("Reset", key="reset_followup"):
+            st.session_state["reset_followup_flag"] = True
+            st.rerun()
+
+    st.markdown("---")
+
+    # ---------- COMPILE PLAN PROMPT ----------
+    st.markdown("### 🧠 Compile Plan Prompt")
+    st.markdown("Must include `{all_qa}`.\n")
+
+    compile_custom = customs.get("compile_plan_prompt", "")
+    compile_default = defaults.get("compile_plan_prompt", "")
+
+    if "compile_plan_prompt" not in st.session_state:
+        st.session_state["compile_plan_prompt"] = compile_custom
+
+    if st.session_state.get("reset_compile_flag"):
+        st.session_state["compile_plan_prompt"] = compile_default
+        st.session_state["reset_compile_flag"] = False
+        st.rerun()
+
+    col1, col2 = st.columns([5, 1])
+    with col1:
+        st.text_area(
+            "Compile Plan Prompt Template",
+            value=st.session_state["compile_plan_prompt"],
+            key="compile_plan_prompt",
+            height=300,
+            label_visibility="collapsed"
+        )
+    with col2:
+        if st.button("Reset", key="reset_compile"):
+            st.session_state["reset_compile_flag"] = True
+            st.rerun()
+
+    st.markdown("---")
+
+    # ---------- SECTION PROMPTS ----------
+    st.markdown("### 📄 Section Prompts")
+
+    custom_section_map = {s["name"]: s["prompt"] for s in customs.get("sections", [])}
+    default_section_map = {s["name"]: s["prompt"] for s in defaults.get("sections", [])}
+
+    updated_sections = []
+
+    for section in SECTIONS:
+        default_prompt = default_section_map.get(section, "")
+        session_key = f"section_prompt_{section}"
+        reset_flag_key = f"reset_section_{section}"
+
+        if session_key not in st.session_state:
+            st.session_state[session_key] = custom_section_map.get(section, "")
+
+        if st.session_state.get(reset_flag_key):
+            st.session_state[session_key] = default_prompt
+            st.session_state[reset_flag_key] = False
+            st.rerun()
+
+        col1, col2 = st.columns([5, 1])
+        with col1:
+            st.markdown(f"**{section}**")
+        with col2:
+            if st.button("Reset", key=f"reset_button_{section}"):
+                st.session_state[reset_flag_key] = True
+                st.rerun()
+
+        st.text_area(
+            "Prompt",
+            value=st.session_state[session_key],
+            key=session_key,
+            height=100,
+            label_visibility="collapsed"
+        )
+
+        st.markdown("\n--\n")
+
+        updated_sections.append({
+            "name": section,
+            "prompt": st.session_state[session_key]
+        })
+
+    # ---------- SAVE CHANGES ----------
     if st.button("💾 Save Changes"):
-        save_prompts(updated)
-        st.success("Prompts saved. Reload the app to apply changes.")
+        errors = []
+
+        if "{question}" not in st.session_state["followup_prompt"] or "{response}" not in st.session_state["followup_prompt"]:
+            errors.append("❌ Follow-up prompt must include `{question}` and `{response}`.")
+        if "{all_qa}" not in st.session_state["compile_plan_prompt"]:
+            errors.append("❌ Compile plan prompt must include `{all_qa}`.")
+
+        if errors:
+            for e in errors:
+                st.error(e)
+        else:
+            RAW_PROMPT_DATA["customs"]["followup_prompt"] = st.session_state["followup_prompt"]
+            RAW_PROMPT_DATA["customs"]["compile_plan_prompt"] = st.session_state["compile_plan_prompt"]
+            RAW_PROMPT_DATA["customs"]["sections"] = updated_sections
+            save_prompts(RAW_PROMPT_DATA)
+            st.success("✅ Custom prompts saved successfully.")
