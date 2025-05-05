@@ -31,7 +31,9 @@ class BusinessPlanBuilder:
         self.SECTIONS = [s["name"] for s in self.customs["sections"]]
         self.QUESTIONS = {s["name"]: s["prompt"] for s in self.customs["sections"]}
         
-        self.condition = asyncio.Condition()
+        self.allow_input_condition = asyncio.Condition()
+        self.input_processed_condition = asyncio.Condition()
+        self.output_ready_condition = asyncio.Condition()
 
     def __init__(self):
         self.__setup()
@@ -62,6 +64,7 @@ class BusinessPlanBuilder:
         self.user_input = ""
         self.output = ""
         self.allow_input = False
+        self.is_output_ready = False
         self.last_served_output = ""
 
 
@@ -76,17 +79,17 @@ class BusinessPlanBuilder:
 
     async def set_user_input(self, user_input: str):
         if self.allow_input:
-            async with self.condition:
+            async with self.allow_input_condition:
                 self.user_input = user_input
-                self.condition.notify()
+                self.allow_input_condition.notify()
 
     async def __wait_for_input(self, state: BusinessPlanState):
         self.allow_input = True
 
-        async with self.condition:
+        async with self.allow_input_condition:
             try:
                 await asyncio.wait_for(
-                    self.condition.wait_for(lambda: self.user_input != ""),
+                    self.allow_input_condition.wait_for(lambda: self.user_input != ""),
                     timeout=3600
                 )
             except asyncio.TimeoutError:
@@ -95,14 +98,21 @@ class BusinessPlanBuilder:
                 state["responses"]["Final Plan"] = "Timed out due to inactivity."
                 self.user_input = "exit"
                 return state
-
-        self.allow_input = False
+        
+        async with self.input_processed_condition:
+            self.is_output_ready = False
+            self.allow_input = False
+            self.input_processed_condition.notify_all()
         self.user_input = self.user_input.strip()
         return state
 
     async def __input_handler(self, state: BusinessPlanState, section_name: str, question: str, is_followup_question: bool = False):
-        # print("Section Num: ", state["current_section"])
         self.user_input = ""
+        
+        async with self.output_ready_condition:
+            self.is_output_ready = True
+            self.output_ready_condition.notify_all()
+        
         state = await self.__wait_for_input(state)
 
         if self.user_input.lower() in ["exit", "back", "skip", "restart"]:
@@ -162,7 +172,6 @@ class BusinessPlanBuilder:
 
         section = state["sections"][state["current_section"]]
         question = self.QUESTIONS[section]
-
         self.output = f"**{section}** - \n{question}"
         state = await self.__input_handler(state, section, question)
 

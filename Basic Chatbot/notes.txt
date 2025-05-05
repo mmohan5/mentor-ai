@@ -1,9 +1,0 @@
-pip install langchain==0.2.3
-pip install langchain-core==0.2.43
-pip install langchain-community==0.2.3
-pip install langchain-text-splitters==0.2.4
-
-pip install langchain-ollama==0.1.1 
-
-
-Personal Repo

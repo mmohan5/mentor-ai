@@ -1,6 +1,31 @@
-streamlit==1.43.2
+# Web framework
+fastapi==0.110.1
+uvicorn[standard]==0.29.0
 
+# LangGraph + related packages
+langchain==0.3.17
+langchain-community==0.3.16
+langchain-core==0.3.58
+langchain-ollama==0.3.1
 langgraph==0.3.18
 langgraph-checkpoint==2.0.21
 langgraph-prebuilt==0.1.4
 langgraph-sdk==0.1.58
+
+# YAML parsing
+pyyaml==6.0.1
+
+# HTTP client (for test_chatbot.py)
+requests==2.31.0
+
+# Input validation and data models
+pydantic==2.9.2
+
+# Streamlit
+streamlit==1.43.2
+
+# For async + Python compatibility
+anyio==4.3.0
+
+# install curl -fsSL https://ollama.com/install.sh | sh
+# ollama pull llama3.1
