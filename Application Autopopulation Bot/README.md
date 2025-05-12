@@ -37,7 +37,7 @@ This is a Streamlit-based tool that assists users in filling out **seed grant ap
 
 ## 🛠 Setup & Run Instructions
 
-Follow these steps to get the app running:
+Install [Python 3.12.2](https://www.python.org/downloads/) and follow these steps to run the application:
 
 ```bash
 # 1. Navigate to the project directory
@@ -132,5 +132,21 @@ questions = [
 ]
 ```
 
-You can modify these directly inside `auto_population.py` in the `questions = [...]` list.
+You can modify these directly inside `auto_population.py` in the `questions = [...]` list.  
 
+---
+
+## 🧠 Agentic AI Behavior in This Application
+
+This app exhibits **agentic AI characteristics** through its autonomous decision-making and flow control during answer generation:
+
+- **Goal-Oriented Behavior**: Once the user provides a company description and clicks "Generate Answers," the system autonomously answers a predefined set of questions without further prompts.
+
+- **Multi-Step Reasoning Loop**: For each generated answer, the AI:
+  1. **Validates factual grounding** using a natural language inference (NLI) model.
+  2. **Detects hallucinated text** by comparing each chunk of the answer to the original company description.
+  3. **Decides independently** whether to regenerate the answer (up to 2 retries), using LLM-driven rewriting to remove or correct hallucinated content.
+
+- **Self-Correcting Mechanism**: If the model fails to produce a grounded answer after maximum retries, it outputs a fallback: `"Information not found"`.
+
+Together, these behaviors demonstrate **agentic properties**: the system not only generates text but **takes initiative to evaluate, revise, and decide** the next action based on intermediate results—without user intervention.

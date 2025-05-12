@@ -28,7 +28,7 @@ This project is an AI chatbot that guides users step-by-step through creating a 
 ---
 # 🛠 Setup & Run Instructions
 
-Follow these steps to set up and run the application:
+Install [Python 3.12.2](https://www.python.org/downloads/) and follow these steps to set up and run the application:
 
 ```bash
 # 1. Navigate to the project directory
@@ -66,6 +66,29 @@ streamlit run streamlit_frontend.py
 - If you don't have a GPU on your device, the ChatBot will perform much slower.
 
 - ctrl+c to shut down back end and front end in terminals.  
+
+--- 
+## 🤖 Agentic AI Behavior in the BusinessChatbotEngine
+
+This application demonstrates **agentic AI** principles by enabling an autonomous, goal-directed dialogue system that builds a business plan through user interaction.
+
+Key agentic behaviors include:
+
+- **Goal-Oriented Flow Control**: The system progresses through multiple predefined sections of a business plan, gathering user input and determining what to ask next without manual intervention.
+
+- **Context-Aware Adaptation**:
+  - It dynamically generates **follow-up questions** using LLM responses based on the user's previous input.
+  - If the user enters commands like `"back"`, `"skip"`, `"exit"`, or `"restart"`, the agent autonomously **changes the flow** - skipping sections, restarting, or exiting gracefully.
+
+- **Memory and History Tracking**:
+  - The system maintains a **history of Q&A** for each section, which it uses later to compile the final business plan.
+  - Inputs are contextually processed and stored for use in the final compilation prompt.
+
+- **Final Output Compilation**:
+  - After collecting responses, the system autonomously constructs a comprehensive business plan using a large language model.
+  - This step is triggered **without user instruction**, based on state conditions.
+
+These behaviors allow the system to **act independently** and **adaptively**.
 
 ---
 # 🧩 Customizing Business Plan Sections
