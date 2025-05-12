@@ -5,6 +5,7 @@ import subprocess
 import sys
 import time
 
+# List of predefined questions that the AI will answer
 questions = [
     # Business Details
     "What is the elevator pitch?",
@@ -22,11 +23,12 @@ questions = [
 ]
 
 def main():
+    # Ensure GPU is available before continuing
     gpu_check()
 
     st.title("Seed Grant Application Assistant")
 
-    # Initialize session state variables
+    # Initialize session state to persist data across Streamlit reruns
     if 'company_description' not in st.session_state:
         st.session_state.company_description = ""
     if 'answers' not in st.session_state:
@@ -40,7 +42,7 @@ def main():
     if 'success_message' not in st.session_state:
         st.session_state.success_message = ""
 
-    # Sidebar to choose between options
+    # Sidebar navigation
     st.sidebar.image("charlotte_logo.png", width=120)
     st.sidebar.title("Navigation")
     
@@ -49,6 +51,7 @@ def main():
     def update_sidebar_selection():
         st.session_state.selected_sidebar_button = st.session_state.sidebar_radio
 
+    # Sidebar radio for selecting between description and answer view
     selected_sidebar_button = st.sidebar.radio(
         "Select a page", 
         options,
@@ -57,7 +60,7 @@ def main():
         key="sidebar_radio"
     )
 
-    # Page for company description input
+    # Page 1: Text area to enter the company description
     if st.session_state.selected_sidebar_button == "Enter Company Description":
         company_description = st.text_area(
             "Enter your company description:",
@@ -66,17 +69,20 @@ def main():
             disabled=st.session_state.show_confirmation
         )
 
+        # Save updated description in session state
         if company_description != st.session_state.company_description and company_description is not None:
             st.session_state.company_description = company_description
 
+        # Trigger generation or confirmation modal
         if st.button("Generate Answers", disabled=st.session_state.generating_answers):
-            if any(st.session_state.answers):
+            if any(st.session_state.answers):  # If answers already exist, ask for confirmation
                 st.session_state.show_confirmation = True
                 st.rerun()
             else:
                 st.session_state.generating_answers = True
                 st.rerun()
 
+        # Confirmation modal to warn user before overwriting existing answers
         if st.session_state.show_confirmation:
             st.warning("This action will replace all existing answers. Are you sure you want to proceed?")
             col1, col2 = st.columns(2)
@@ -90,9 +96,8 @@ def main():
                     st.session_state.show_confirmation = False
                     st.rerun()
 
-    # Page for displaying and editing answers
+    # Page 2: View or edit each answer
     elif st.session_state.selected_sidebar_button == "View/Edit Answers":
-        st.session_state.company_description = st.session_state.company_description
         for i, question in enumerate(questions):
             answer = st.text_area(
                 question,
@@ -103,6 +108,7 @@ def main():
             if answer != st.session_state.answers[i]:
                 st.session_state.answers[i] = answer
 
+        # Save answers and generate downloadable PDF
         if st.button("Save Answers"):
             st.session_state.success_message = "Answers saved successfully!"
             pdf_content = create_pdf(questions, st.session_state.answers)
@@ -113,7 +119,7 @@ def main():
                 mime="application/pdf"
             )
 
-    # Generate answers if the flag is set
+    # AI generation logic triggered
     if st.session_state.generating_answers:
         with st.spinner("Generating answers... This may take up to a few minutes."):
             st.session_state.answers = generate_answers(st.session_state.company_description, questions)
@@ -121,12 +127,12 @@ def main():
         st.session_state.success_message = "Answers generated successfully!"
         st.rerun()
 
-    # Display success message if it exists
+    # Show success message and clear it after display
     if st.session_state.success_message:
         st.success(st.session_state.success_message)
-        # Clear the message after displaying
         st.session_state.success_message = ""
 
+# Verifies if GPU is available using nvidia-smi
 def gpu_check():
     if 'gpu_message_shown' not in st.session_state:
         st.session_state.gpu_message_shown = False
@@ -150,6 +156,7 @@ def gpu_check():
             st.error("Unable to check GPU status. Exiting.")
             sys.exit(1)
 
+# Generate a PDF with the final answers
 def create_pdf(questions, answers):
     pdf = FPDF()
     pdf.add_page()
@@ -160,7 +167,7 @@ def create_pdf(questions, answers):
     pdf.cell(200, 10, txt="Seed Grant Application", ln=True, align='C')
     pdf.ln(10)
     
-    # Add questions and answers
+    # List each question and answer pair
     pdf.set_font("Arial", size=12)
     for question, answer in zip(questions, answers):
         pdf.set_font("Arial", 'B', 12)
@@ -172,8 +179,7 @@ def create_pdf(questions, answers):
     return pdf.output(dest='S').encode('latin-1')
 
 
-
-# AI model code
+# AI model and hallucination validation setup
 from langchain_community.chat_models import ChatOllama
 from transformers import pipeline
 import torch
@@ -182,19 +188,9 @@ from nltk.tokenize import sent_tokenize, word_tokenize
 # from langchain.vectorstores import Chroma
 # from langchain.embeddings import HuggingFaceEmbeddings
 
+nltk.download('punkt_tab')  # Tokenizer used for splitting text
 
-# embeddings = HuggingFaceEmbeddings(model_name="intfloat/e5-base-v2")
-
-# # Load the existing Chroma database
-# vectorstore = Chroma(
-#     persist_directory="./app_examples_db",
-#     embedding_function=embeddings
-# )
-
-
-nltk.download('punkt_tab')
-
-# 100 tokens per chunk
+# Splits text into manageable token-sized chunks
 def chunk_text(text, max_tokens=80, overlap=8):
     sentences = sent_tokenize(text)
     chunks = []
@@ -214,9 +210,7 @@ def chunk_text(text, max_tokens=80, overlap=8):
             current_chunk = sentence + " "
             current_chunk_tokens = sentence_tokens
             
-            # If the sentence itself exceeds max_tokens, split it
             while current_chunk_tokens > max_tokens:
-                # Token tolerance for long sentences
                 if current_chunk_tokens <= max_tokens + max_tokens/2.1:
                    break
 
@@ -231,14 +225,12 @@ def chunk_text(text, max_tokens=80, overlap=8):
 
     return chunks
 
-
+# Uses NLI model to check if chunk is grounded in the description
 def check_hallucination(nli_model, chunk, description):
     result = nli_model(chunk, [description], hypothesis_template="This text is true: {}")
-    # print(result["scores"])
-    # print(chunk)
-    # print()
-    return result['scores'][0] < 0.81
+    return result['scores'][0] < 0.81  # Low score indicates a possible hallucination
 
+# Rewrite answer using LLM if hallucinated chunks were found
 def regenerate_answer(llm, chunks, description, question, answer):
     prompt = f"""
     Company Description: ""{description}""
@@ -263,6 +255,7 @@ def regenerate_answer(llm, chunks, description, question, answer):
     """
     return llm.invoke(prompt).content
 
+# Main logic to generate and validate answers
 def generate_answers(description, questions):
     llm = ChatOllama(model="llama3.1", device="cuda", temperature=0)
     nli_model = pipeline("zero-shot-classification", model="facebook/bart-large-mnli", device=0 if torch.cuda.is_available() else -1)
@@ -270,12 +263,9 @@ def generate_answers(description, questions):
     description_chunks = chunk_text(description, 600, 10)
     answers = []
 
-    # query = description
-    # results = vectorstore.similarity_search(query, k=1)
-    # result = results[0].metadata['source_content']
-
     try:
         for question in questions:
+            # Prompt LLM to generate answer based solely on description
             prompt = f"""
             Company Description: ""{description}""
 
@@ -293,12 +283,9 @@ def generate_answers(description, questions):
             - Everything should be in plain text. Do not include any formatting or special characters.
             - Be descriptive and provide concrete detail.
 """
-            # Here is an example of a filled out application (for format and structure reference only; do not use this information in your response):
-            # ""{result}""
-            # """
-
             answer = llm.invoke(prompt).content
 
+            # Check for hallucinated chunks and attempt to correct up to 2 times
             for attempts in range(3):
                 chunks = chunk_text(answer)
                 bad_chunks = []
@@ -309,16 +296,16 @@ def generate_answers(description, questions):
                         if not check_hallucination(nli_model, chunk, description_chunk):
                             bad_one = False
                             break
-                        
                     if bad_one:
                         bad_chunks.append(chunk)
 
                 if not bad_chunks:
-                    break
+                    break  # All content is grounded
                 elif attempts == 2:
-                    answer = no_info
+                    answer = no_info  # Fallback if unable to fix hallucinations
                     break
                 else:
+                    # Regenerate using only grounded content
                     answer = regenerate_answer(llm, "\n".join(bad_chunks), description, question, answer)
 
             answers.append(answer)
