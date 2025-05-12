@@ -4,7 +4,11 @@ from langchain_community.chat_models import ChatOllama
 from langgraph.graph import StateGraph, END
 from typing import TypedDict, Dict, List
 import asyncio
+# To use Anthropic's Claude model, uncomment the following lines:
 # from langchain_anthropic import ChatAnthropic
+# from dotenv import load_dotenv
+
+# load_dotenv()
 
 # ---- TypedDict defining the structure of the state used in the business plan process
 class BusinessPlanState(TypedDict):    
@@ -19,7 +23,7 @@ class BusinessPlanBuilder:
     def __setup(self):
         # Initialize the language model (ChatOllama using llama3.1 running on CUDA)
         self.llm = ChatOllama(model="llama3.1", device="cuda", temperature=0)
-        # self.llm = ChatAnthropic(model="claude-3-opus-20240229", temperature=0)
+        # self.llm = ChatAnthropic(model="claude-3-opus-20240229", temperature=0, anthropic_api_key=os.getenv("ANTHROPIC_API_KEY"))
 
 
         # Load prompt templates from prompts.yaml
