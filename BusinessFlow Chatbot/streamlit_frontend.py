@@ -15,8 +15,8 @@ def gpu_check():
         output = subprocess.check_output("nvidia-smi", shell=True).decode("utf-8")
         
         if "No devices were found" in output:
-            st.error("🚫 No GPU detected. Exiting.")
-            st.stop()
+            st.error("🚫 No GPU detected.")
+            # st.stop()
         elif "%" in output:
             if "show_gpu_success" not in st.session_state:
                 st.session_state.show_gpu_success = True
@@ -26,11 +26,11 @@ def gpu_check():
                 time.sleep(1)
                 st.session_state.show_gpu_success = False
         else:
-            st.warning("⚠️ GPU detected but not in use. Exiting.")
-            st.stop()
+            st.warning("⚠️ GPU detected but not in use.")
+            # st.stop()
     except subprocess.CalledProcessError:
-        st.error("❌ Could not check GPU. Exiting.")
-        st.stop()
+        st.error("❌ Could not check GPU.")
+        # st.stop()
 
 gpu_check()
 
@@ -140,24 +140,6 @@ if page == "User":
     }.items():
         if key not in st.session_state:
             st.session_state[key] = default
-
-    # Initialize session (start server and get first output)
-    if st.session_state.session_id is None:
-        with st.spinner("⏳ Starting session..."):
-            res = requests.post(f"{API_URL}/start")
-            res.raise_for_status()
-            data = res.json()
-
-            st.session_state.session_id = data["session_id"]
-            output = data["output"]
-            st.session_state.allow_input = data["allow_input"]
-
-            st.session_state.history.append(("assistant", output))
-
-            if "--- Your Complete Business Plan ---" in output:
-                st.session_state.finished = True
-
-            st.rerun()
 
     # Display conversation history
     for role, content in st.session_state.history:

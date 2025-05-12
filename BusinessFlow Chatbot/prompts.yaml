@@ -57,14 +57,6 @@ customs:
     prompt: What is your business structure, and who are the key members of your team?
   - name: Service or Product Line
     prompt: What products or services do you offer, and how do they benefit customers?
-  - name: Marketing and Sales
-    prompt: How will you attract and retain customers, and how will you generate sales?
-  - name: Funding Request
-    prompt: How much funding do you need, and what will it be used for?
-  - name: Financial Projections
-    prompt: What are your projected revenues, expenses, and break-even point?
-  - name: Executive Summary
-    prompt: Summarize your business plan in a few sentences.
 defaults:
   compile_plan_prompt: 'Based on the following structured questions and answers, generate
     a detailed, professional, and well-formatted business plan. Ensure that it follows
@@ -124,11 +116,3 @@ defaults:
     prompt: What is your business structure, and who are the key members of your team?
   - name: Service or Product Line
     prompt: What products or services do you offer, and how do they benefit customers?
-  - name: Marketing and Sales
-    prompt: How will you attract and retain customers, and how will you generate sales?
-  - name: Funding Request
-    prompt: How much funding do you need, and what will it be used for?
-  - name: Financial Projections
-    prompt: What are your projected revenues, expenses, and break-even point?
-  - name: Executive Summary
-    prompt: Summarize your business plan in a few sentences.

@@ -26,6 +26,8 @@ class UserInput(BaseModel):
     session_id: str
     user_input: str
 
+
+# Ceate instance of AI engine and get the first question
 @app.post("/start")
 async def start():
     session_id = str(uuid4())
@@ -47,7 +49,7 @@ async def start():
         "allow_input": engine.allow_input
     }
 
-
+# Process user input and gets the next question after generation
 @app.post("/step")
 async def step(user_input: UserInput):
     session_id = user_input.session_id
@@ -74,7 +76,7 @@ async def step(user_input: UserInput):
             try:
                 await asyncio.wait_for(
                     engine.output_ready_condition.wait(),
-                    timeout=180.0 # 3 minutes
+                    timeout=600.0 # 10 min
                 )
             except asyncio.TimeoutError:
                 pass
